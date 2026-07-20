@@ -1,98 +1,317 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+type Task = {
+  id: number;
+  title: string;
+  completed: boolean;
+};
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [taskInput, setTaskInput] = useState('');
+  const [tasks, setTasks] = useState<Task[]>([]);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const pendingCount = tasks.filter((task) => !task.completed).length;
+
+  const addTask = () => {
+    const trimmedTask = taskInput.trim();
+
+    if (!trimmedTask) {
+      return;
+    }
+
+    setTasks((currentTasks) => [
+      ...currentTasks,
+      {
+        id: Date.now(),
+        title: trimmedTask,
+        completed: false,
+      },
+    ]);
+    setTaskInput('');
+  };
+
+  const toggleTask = (taskId: number) => {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === taskId ? { ...task, completed: !task.completed } : task,
+      ),
+    );
+  };
+
+  const deleteTask = (taskId: number) => {
+    setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerTextBlock}>
+            <Text style={styles.eyebrow}>Pocket Tasks</Text>
+            <Text style={styles.title}>Keep your day calm and clear.</Text>
+            <Text style={styles.subtitle}>
+              Add a task, finish it, and remove what is no longer needed.
+            </Text>
+          </View>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{pendingCount} pending</Text>
+          </View>
+        </View>
+
+        <View style={styles.inputCard}>
+          <TextInput
+            value={taskInput}
+            onChangeText={setTaskInput}
+            placeholder="What do you need to do?"
+            style={styles.input}
+            returnKeyType="done"
+            onSubmitEditing={addTask}
+            accessibilityLabel="Task name"
+          />
+          <Pressable
+            onPress={addTask}
+            style={styles.addButton}
+            accessibilityRole="button"
+            accessibilityLabel="Add task"
+          >
+            <Text style={styles.addButtonText}>Add task</Text>
+          </Pressable>
+        </View>
+
+        {tasks.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateIcon}>✨</Text>
+            <Text style={styles.emptyStateTitle}>Nothing here yet</Text>
+            <Text style={styles.emptyStateText}>
+              Your first task will appear here once you add it.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.list}>
+            {tasks.map((task) => (
+              <View
+                key={task.id}
+                style={[styles.taskCard, task.completed && styles.taskCardCompleted]}
+              >
+                <Pressable
+                  onPress={() => toggleTask(task.id)}
+                  style={styles.taskContent}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: task.completed }}
+                  accessibilityLabel={`Mark ${task.title} as ${task.completed ? 'incomplete' : 'complete'}`}
+                >
+                  <View style={[styles.checkbox, task.completed && styles.checkboxChecked]}>
+                    {task.completed ? <Text style={styles.checkboxText}>✓</Text> : null}
+                  </View>
+                  <View style={styles.taskTextBlock}>
+                    <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>
+                      {task.title}
+                    </Text>
+                    <Text style={styles.taskHint}>
+                      {task.completed ? 'Completed' : 'Tap to mark complete'}
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => deleteTask(task.id)}
+                  style={styles.deleteButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete ${task.title}`}
+                >
+                  <Text style={styles.deleteText}>Delete</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f7ff',
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    gap: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  headerTextBlock: {
+    flex: 1,
+    gap: 6,
+  },
+  eyebrow: {
+    color: '#5364ff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: '#14213d',
+    fontSize: 28,
+    fontWeight: '700',
+    lineHeight: 34,
+  },
+  subtitle: {
+    color: '#5f6b85',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  badge: {
+    backgroundColor: '#e7ebff',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  badgeText: {
+    color: '#3042b8',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  inputCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    gap: 12,
+    shadowColor: '#1f2a44',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#dfe5f3',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#14213d',
+  },
+  addButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#5364ff',
+    borderRadius: 14,
+    paddingVertical: 13,
+  },
+  addButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    gap: 10,
+  },
+  emptyStateIcon: {
+    fontSize: 32,
+  },
+  emptyStateTitle: {
+    color: '#14213d',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  emptyStateText: {
+    color: '#5f6b85',
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  list: {
+    gap: 12,
+  },
+  taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+    shadowColor: '#1f2a44',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 2,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  taskCardCompleted: {
+    backgroundColor: '#f3f6ff',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  taskContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#aeb8d1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#5364ff',
+    borderColor: '#5364ff',
+  },
+  checkboxText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  taskTextBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  taskTitle: {
+    color: '#14213d',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  taskTitleCompleted: {
+    color: '#6a7698',
+    textDecorationLine: 'line-through',
+  },
+  taskHint: {
+    color: '#7f8ba6',
+    fontSize: 12,
+  },
+  deleteButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  deleteText: {
+    color: '#d5465a',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

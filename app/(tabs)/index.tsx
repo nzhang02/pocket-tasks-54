@@ -1,12 +1,25 @@
 import { useState } from 'react';
 import {
+  FlatList,
+  KeyboardAvoidingView,
+  LayoutAnimation,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type Task = {
   id: number;
@@ -27,6 +40,7 @@ export default function HomeScreen() {
       return;
     }
 
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setTasks((currentTasks) => [
       ...currentTasks,
       {
@@ -47,93 +61,104 @@ export default function HomeScreen() {
   };
 
   const deleteTask = (taskId: number) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTextBlock}>
-            <Text style={styles.eyebrow}>Pocket Tasks</Text>
-            <Text style={styles.title}>Keep your day calm and clear.</Text>
-            <Text style={styles.subtitle}>
-              Add a task, finish it, and remove what is no longer needed.
-            </Text>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <View style={styles.headerTextBlock}>
+              <Text style={styles.eyebrow}>Pocket Tasks</Text>
+              <Text style={styles.title}>Keep your day calm and clear.</Text>
+              <Text style={styles.subtitle}>
+                Add a task, finish it, and remove what is no longer needed.
+              </Text>
+            </View>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{pendingCount} pending</Text>
+            </View>
           </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{pendingCount} pending</Text>
-          </View>
-        </View>
 
-        <View style={styles.inputCard}>
-          <TextInput
-            value={taskInput}
-            onChangeText={setTaskInput}
-            placeholder="What do you need to do?"
-            style={styles.input}
-            returnKeyType="done"
-            onSubmitEditing={addTask}
-            accessibilityLabel="Task name"
-          />
-          <Pressable
-            onPress={addTask}
-            style={styles.addButton}
-            accessibilityRole="button"
-            accessibilityLabel="Add task"
-          >
-            <Text style={styles.addButtonText}>Add task</Text>
-          </Pressable>
-        </View>
-
-        {tasks.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateIcon}>✨</Text>
-            <Text style={styles.emptyStateTitle}>Nothing here yet</Text>
-            <Text style={styles.emptyStateText}>
-              Your first task will appear here once you add it.
-            </Text>
+          <View style={styles.inputCard}>
+            <TextInput
+              value={taskInput}
+              onChangeText={setTaskInput}
+              placeholder="What do you need to do?"
+              style={styles.input}
+              returnKeyType="done"
+              onSubmitEditing={addTask}
+              accessibilityLabel="Task name"
+            />
+            <Pressable
+              onPress={addTask}
+              style={styles.addButton}
+              accessibilityRole="button"
+              accessibilityLabel="Add task"
+            >
+              <Ionicons name="add" size={20} color="#ffffff" style={{ marginRight: 4 }} />
+              <Text style={styles.addButtonText}>Add task</Text>
+            </Pressable>
           </View>
-        ) : (
-          <View style={styles.list}>
-            {tasks.map((task) => (
-              <View
-                key={task.id}
-                style={[styles.taskCard, task.completed && styles.taskCardCompleted]}
-              >
-                <Pressable
-                  onPress={() => toggleTask(task.id)}
-                  style={styles.taskContent}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: task.completed }}
-                  accessibilityLabel={`Mark ${task.title} as ${task.completed ? 'incomplete' : 'complete'}`}
+
+          {tasks.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateIcon}>✨</Text>
+              <Text style={styles.emptyStateTitle}>Nothing here yet</Text>
+              <Text style={styles.emptyStateText}>
+                Your first task will appear here once you add it.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={tasks}
+              keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={styles.list}
+              renderItem={({ item: task }) => (
+                <View
+                  style={[styles.taskCard, task.completed && styles.taskCardCompleted]}
                 >
-                  <View style={[styles.checkbox, task.completed && styles.checkboxChecked]}>
-                    {task.completed ? <Text style={styles.checkboxText}>✓</Text> : null}
-                  </View>
-                  <View style={styles.taskTextBlock}>
-                    <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>
-                      {task.title}
-                    </Text>
-                    <Text style={styles.taskHint}>
-                      {task.completed ? 'Completed' : 'Tap to mark complete'}
-                    </Text>
-                  </View>
-                </Pressable>
+                  <Pressable
+                    onPress={() => toggleTask(task.id)}
+                    style={styles.taskContent}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: task.completed }}
+                    accessibilityLabel={`Mark ${task.title} as ${task.completed ? 'incomplete' : 'complete'}`}
+                  >
+                    <View style={[styles.checkbox, task.completed && styles.checkboxChecked]}>
+                      {task.completed ? (
+                        <Ionicons name="checkmark" size={16} color="#ffffff" />
+                      ) : null}
+                    </View>
+                    <View style={styles.taskTextBlock}>
+                      <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>
+                        {task.title}
+                      </Text>
+                      <Text style={styles.taskHint}>
+                        {task.completed ? 'Completed' : 'Tap to mark complete'}
+                      </Text>
+                    </View>
+                  </Pressable>
 
-                <Pressable
-                  onPress={() => deleteTask(task.id)}
-                  style={styles.deleteButton}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete ${task.title}`}
-                >
-                  <Text style={styles.deleteText}>Delete</Text>
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
+                  <Pressable
+                    onPress={() => deleteTask(task.id)}
+                    style={styles.deleteButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${task.title}`}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#d5465a" />
+                  </Pressable>
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -209,6 +234,7 @@ const styles = StyleSheet.create({
     color: '#14213d',
   },
   addButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#5364ff',
@@ -283,11 +309,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#5364ff',
     borderColor: '#5364ff',
   },
-  checkboxText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
   taskTextBlock: {
     flex: 1,
     gap: 2,
@@ -308,10 +329,5 @@ const styles = StyleSheet.create({
   deleteButton: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-  },
-  deleteText: {
-    color: '#d5465a',
-    fontSize: 14,
-    fontWeight: '700',
   },
 });
